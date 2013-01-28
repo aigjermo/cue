@@ -4,11 +4,12 @@
 #include "defaults.h"
 
 
-#define POCKET_URL "https://getpocket.com/v3/oauth/request"
+#define POCKET_URL      "https://getpocket.com/"
+#define POCKET_REDIRECT "~/test.html"
+#define POCKET_KEY      "11706-e0ddf4a044fc1629613f1abc"
 
-#define POCKET_KEY "11706-e0ddf4a044fc1629613f1abc"
 
-
-int pocket_authorize();           // authorize application with pocket
+int     pocket_authorize();           // authorize application with pocket
+void    pocket_cleanup();
 
 #endif

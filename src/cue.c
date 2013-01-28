@@ -37,5 +37,7 @@ int main (int argc, char* argv[]) {
 
     network_cleanup();
 
+    pocket_cleanup();
+
     return 0;
 }

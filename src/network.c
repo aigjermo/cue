@@ -27,7 +27,7 @@ int network_init() {
 
     if (curl) return 0;
 
-    DEBUGPRINT(1, "failed to initialize curl");
+    DEBUGPRINT(1, "whoops! curl wouldn't initialize");
 
     curl_global_cleanup();
     return -1;
@@ -42,14 +42,34 @@ void network_cleanup() {
     curl_global_cleanup();
 }
 
+void network_response_cleanup(
+        struct network_response *res) {
+    
+    if (res->string)
+        free(res->string);
 
+    if (res) 
+        free(res);
+}
+
+
+/**
+ * @brief Callback function for curl to drop it's data
+ *
+ * @param ptr       pointer to the incoming data
+ * @param size      size of the datatype
+ * @param nmemb     number of elements
+ * @param out       pointer to the outgoing struct
+ *
+ * @return          number of bytes copied
+ */
 size_t network_get_response(void *ptr, size_t size, size_t nmemb, void *out) {
 
     size_t bsize = size * nmemb;
     struct network_response *resp = out;
     resp->string = malloc(bsize+size);
     if (resp->string == NULL) {
-        DEBUGPRINT(0, "realloc failed\n");
+        DEBUGPRINT(0, "malloc failed in network_get_response()\n");
         return 0;
     }
 
@@ -71,13 +91,20 @@ size_t network_get_response(void *ptr, size_t size, size_t nmemb, void *out) {
  */
 struct network_response *network_post(const char *url, const char *data) {
 
-    if (!curl) return NULL;   // init first
+    if (!curl) {
+        DEBUGPRINT(0, "curl has not been initialized\n");
+        return NULL;   // init first
+    }
 
     struct network_response *response = malloc(sizeof(response));
     if (response == NULL) {
-        DEBUGPRINT(1, "malloc failed\n");
+        DEBUGPRINT(0, "malloc failed in network_post()\n");
         return NULL;
     }
+
+    // clear response struct
+    response->code = '\0';
+    response->string = NULL;
 
     // setup query
     curl_easy_setopt(curl, CURLOPT_URL, url);
@@ -88,11 +115,19 @@ struct network_response *network_post(const char *url, const char *data) {
     // execute
     CURLcode res = curl_easy_perform(curl);
     if (res != CURLE_OK) {
-        DEBUGPRINT(0, "post request failed with error: %s\n",
+        DEBUGPRINT(0, "tried connecting, but got error: %s\n",
                 curl_easy_strerror(res));
+        free(response);
+        return NULL;
     }
 
-    response->code = res;
+    curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &(response->code));
+
+    if (response->code != 200) {
+        DEBUGPRINT(0, "pocket responded with: %s\n", response->string);
+        free(response);
+        return NULL;
+    }
 
     return response;
 }
