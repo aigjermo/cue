@@ -7,6 +7,8 @@
  */
 
 #include <curl/curl.h>
+#include <stdlib.h>     //malloc
+#include <string.h>     //memcpy
 
 #include "network.h"
 
@@ -41,21 +43,56 @@ void network_cleanup() {
 }
 
 
+size_t network_get_response(void *ptr, size_t size, size_t nmemb, void *out) {
+
+    size_t bsize = size * nmemb;
+    struct network_response *resp = out;
+    resp->string = malloc(bsize+size);
+    if (resp->string == NULL) {
+        DEBUGPRINT(0, "realloc failed\n");
+        return 0;
+    }
+
+    resp->string = memcpy(resp->string, ptr, bsize);
+    *(resp->string + bsize) = '\0';
+
+    DEBUGPRINT(1,"got %zu bytes from pocket\n", bsize);
+
+    return bsize;
+}
+
 /**
  * @brief send post request to given address
  *
  * @param url       the address
+ * @param data      data to send
  *
  * @return          -1 if failed, http response code otherwise
  */
-int network_post(const char *url, const char *data) {
+struct network_response *network_post(const char *url, const char *data) {
 
-    if (!curl) return -1;   // init first
+    if (!curl) return NULL;   // init first
 
+    struct network_response *response = malloc(sizeof(response));
+    if (response == NULL) {
+        DEBUGPRINT(1, "malloc failed\n");
+        return NULL;
+    }
+
+    // setup query
     curl_easy_setopt(curl, CURLOPT_URL, url);
     curl_easy_setopt(curl, CURLOPT_POSTFIELDS, data);
+    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, network_get_response);
+    curl_easy_setopt(curl, CURLOPT_WRITEDATA, response);
 
+    // execute
     CURLcode res = curl_easy_perform(curl);
+    if (res != CURLE_OK) {
+        DEBUGPRINT(0, "post request failed with error: %s\n",
+                curl_easy_strerror(res));
+    }
 
-    return res;
+    response->code = res;
+
+    return response;
 }
