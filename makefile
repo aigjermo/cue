@@ -24,12 +24,12 @@ CFLAGS = -g -Wall
 #sources
 VPATH = %.c src/
 VPATH = %.h src/
-SOURCES = cue.c pocket.c network.c
+SOURCES = cue.c pocket.c network.c storage.c
 
 #object specification
 #OBJECTS = $(addprefix $(OBJDIR)/, $(SOURCES:.c=.o))
 CUEOBJ = 		$(addprefix $(OBJDIR)/, \
-			 	cue.o pocket.o network.o)
+			 	cue.o pocket.o network.o storage.o)
 
 all: cue
 

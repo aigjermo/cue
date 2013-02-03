@@ -11,30 +11,21 @@
 #include <string.h>
 
 #include "pocket.h"
+#include "storage.h"
 #include "network.h"
 
 /**
  * @name Internal procedure declarations
  * @{ */
-int pocket_get_request_token();           // oauth step 1
-int pocket_user_auth();                   // oauth step 2
-int pocket_get_access_token();            // oauth step 3
-
+int pocket_get_request_token    (char **token);         // oauth step 1
+int pocket_user_auth            (const char *token);    // oauth step 2
+int pocket_get_access_token     (const char *token);    // oauth step 3
 /**  @} */
 
 
 /**
- * @brief oauth keys
- */
-struct pocket_keys {
-
-    char *request_token;
-    char *access_token;
-};
-
-struct pocket_keys keys;
-
-// Exposed procedures
+ * @name Exposed procedures
+ * @{ */
 
 /**
  * @brief Authorize app against pocket service
@@ -43,49 +34,46 @@ struct pocket_keys keys;
  */
 int pocket_authorize() {
 
-    DEBUGPRINT(1, "requesting token from pocket...\n");
+    DEBUGPRINT(1, "II:: requesting token from pocket...\n");
 
-    if (pocket_get_request_token())
+    char *token = NULL;
+
+    if (pocket_get_request_token(&token))
         return 1;
 
-    DEBUGPRINT(1, "received token: %s\n", keys.request_token);
+    DEBUGPRINT(1, "II:: received request token: %s\n", token);
 
-    if (pocket_user_auth())
+    if (pocket_user_auth(token))
         return 2;
 
-    DEBUGPRINT(1, "successfully redirected user..\n");
+    DEBUGPRINT(1, "II:: successfully redirected user..\n");
 
-    if (pocket_get_access_token()) {
+    if (pocket_get_access_token(token)) {
         return 3;
     }
+
+    free(token);
 
     return 0;
 }
 
-void pocket_cleanup() {
+/**  @} */
 
-    if (keys.request_token != NULL)
-        free(keys.request_token);
-
-    if (keys.access_token != NULL)
-        free(keys.access_token);
-}
-
-// Internal procedures
+/**
+ * @name Internal procedures
+ * @{ */
 
 /**
  * @brief Start the pocket authorize procedure by getting request_token
  *
  * @return request token from pocket
  */
-int pocket_get_request_token() {
+int pocket_get_request_token(char **token) {
 
     char *req = "consumer_key=" POCKET_KEY
                 "&redirect_uri=" POCKET_REDIRECT;
 
-    struct network_response *res = 
-        network_post(POCKET_URL "v3/oauth/request", req);
-
+    network_response *res = network_post(POCKET_URL "v3/oauth/request", req); 
     if (!res) {
         return 1;
     }
@@ -93,7 +81,8 @@ int pocket_get_request_token() {
     // extract data from response
     char *ptr = strstr(res->string, "code=");
     if (!ptr) {
-        DEBUGPRINT(0, "got malformed response from pocket: %s\n", res->string);
+        DEBUGPRINT(0, "EE:: got malformed response from pocket:\nEE:: -> %s\n", 
+                res->string);
         free(res);
         network_response_cleanup(res);
         return 2;
@@ -102,16 +91,14 @@ int pocket_get_request_token() {
     ptr = ptr+5;
     int len = strlen(ptr) + 1;
 
-    DEBUGPRINT(2, "got code=%s\n", ptr);
-
-    keys.request_token = malloc(len);
-    if (!keys.request_token) {
-        DEBUGPRINT(0, "malloc failed in pocket_get_request_token()\n");
+    *token = malloc(len);
+    if (!*token) {
+        DEBUGPRINT(0, "EE:: malloc failed in pocket_get_request_token()\n");
         network_response_cleanup(res);
         return 3;
     }
 
-    keys.request_token = strncpy(keys.request_token, ptr, len);
+    *token = strncpy(*token, ptr, len);
 
     // free memory
     network_response_cleanup(res);
@@ -124,74 +111,81 @@ int pocket_get_request_token() {
  *
  * @return 0
  */
-int pocket_user_auth() {
+int pocket_user_auth(const char *token) {
 
-    printf("Trying to open your browser so you can authorize me...\n");
+    printf("Press enter to open a browser and authorize cue");
+    getchar(); // wait for user to confirm
 
     // try to open browers
-    char cmd[150];
+    char cmd[200];
     sprintf(cmd, "xdg-open \"" POCKET_URL "auth/authorize?"
             "request_token=%s&redirect_uri=" POCKET_REDIRECT "\" 2>/dev/null",
-            keys.request_token);
+            token);
 
-    system(cmd);
-
-    printf("Back from pocket? press enter to continue..\n");
-    getchar(); // we don't really care what the user writes
+    if (system(cmd)) {
+        printf("could not open browser, please open the follong url and "
+                "authorize cue, then come back here and press enter\n"
+                "url: " POCKET_URL "auth/authorize?request_token=%s&"
+                "redirect_uri=" POCKET_REDIRECT "\n", token);
+    }
+    else { 
+        printf("Back from pocket? press enter to continue..\n");
+    }
+    getchar(); // again wait for user
 
     return 0;
 }
 
-int pocket_get_access_token() {
+/**
+ * @brief Request an access token from pocket
+ *
+ * @return 0 if successful
+ */
+int pocket_get_access_token(const char *token) {
 
-    if (!keys.request_token) {
-        DEBUGPRINT(0, "tried authorizing without a request token\n");
+    if (!token) {
+        DEBUGPRINT(0, "EE:: tried authorizing without a request token\n");
         return 1;
     }
 
     char req[100];
-    sprintf(req, "consumer_key=" POCKET_KEY "&code=%s", keys.request_token);
+    sprintf(req, "consumer_key=" POCKET_KEY "&code=%s", token);
     
-    struct network_response *res =
+    network_response *res =
         network_post(POCKET_URL "v3/oauth/authorize", req);
 
     if (!res) {
-        return 1;
-    }
-
-    // parse response
-    char *token = strstr(res->string, "access_token=");
-    char *user = strstr(res->string, "username=");
-    
-    if (!token || !user) {
-        DEBUGPRINT(0, "got malformed response from pocket: %s\n", res->string);
-        network_response_cleanup(res);
         return 2;
     }
 
-    token   += 13;
+    // parse response
+    char *rtoken = strstr(res->string, "access_token=");
+    char *user = strstr(res->string, "username=");
+    
+    if (!rtoken || !user) {
+        DEBUGPRINT(0, "EE:: got malformed response from pocket: %s\n",
+                res->string);
+        network_response_cleanup(res);
+        return 3;
+    }
+
+    rtoken   += 13;
     user    += 9;
 
     char *ptr;
     while ((ptr = strrchr(res->string, '&')))
         *ptr = '\0';
 
-    DEBUGPRINT(2, "got code=%s & user=%s\n", token, user);
-
-    // copy data
-    int tlen = strlen(token) + 1;
-
-    keys.access_token = malloc(tlen);
-    if (!keys.access_token) {
-        DEBUGPRINT(0, "malloc failed in pocket_get_access_token()\n");
+    if (storage_store_token(rtoken)) {
+        DEBUGPRINT(0, "EE:: failed to store token \n");
         network_response_cleanup(res);
-        return 3;
+        return 4;
     }
-
-    keys.access_token = strncpy(keys.access_token, token, tlen);
 
     // free memory
     network_response_cleanup(res);
 
     return 0;
 }
+
+/**  @} */
