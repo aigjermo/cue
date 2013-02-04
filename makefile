@@ -34,8 +34,8 @@ CUEOBJ = 		$(addprefix $(OBJDIR)/, \
 all: cue
 
 clean:
-	rm -f $(OBJDIR)/*.o
-	rm -f $(BINDIR)/*
+	rm -f $(CUEOBJ)
+	rm -f $(BINDIR)/cue
 
 cue: $(CUEOBJ) -lcurl
 	$(CC) $(CFLAGS) -o $(BINDIR)/$@ $^
