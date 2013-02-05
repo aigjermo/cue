@@ -9,6 +9,9 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <errno.h>
 
 #include "storage.h"
 
@@ -18,7 +21,9 @@
 int setStorageDirs ();
 
 // utility declarations
-int getDir (char **dest, const char *v, char *def);
+int getDir          (char **dest, const char *v, char *def);
+int mkDir           (const char *path);
+int constructPath   (char **dest, const char *f, const char *d);
 /**  @} */
 
 
@@ -71,6 +76,25 @@ void storage_cleanup () {
  */
 int storage_store_token (const char *token) {
 
+    if (!storageDirs.conf) {
+        DEBUGPRINT(0,"EE:: storage_store_token() before storage_init()\n");
+        return 1;
+    }
+
+    char *filename = NULL;
+    if (constructPath(&filename, "token", storageDirs.conf)) {
+        return 2;
+    }
+
+    FILE *f = fopen(filename, "w");
+    if (!f) {
+        DEBUGPRINT(0,"EE:: storage_store_token() "
+                "could not open file for writing: %s\n", strerror(errno));
+        return 3;
+    }
+
+    fprintf(f, "%s", token);
+    fclose(f);
 
     return 0;
 }
@@ -93,6 +117,12 @@ int setStorageDirs () {
 
     if (getDir(&(storageDirs.data), "XDG_DATA_HOME", "/.local/share"))
         return 2;
+
+    if (mkDir(storageDirs.conf))
+        return 3;
+
+    if (mkDir(storageDirs.data))
+        return 4;
 
     return 0;
 }
@@ -134,6 +164,58 @@ int getDir (char **dest, const char *v, char *def) {
     }
 
     sprintf(*dest, "%s%s%s", base, defpath, cuepath);
+    return 0;
+}
+
+
+/**
+ * @brief Create a directory if it doesn't exist
+ *
+ * @param path      path of the directory
+ *
+ * @return 0 if okay
+ */
+int mkDir (const char *path) {
+
+    struct stat sb;
+    if (!stat(path, &sb) && S_ISDIR(sb.st_mode)) {
+        DEBUGPRINT(2,"II:: mkDir(): %s exists\n", path);
+        return 0;
+    }
+
+    if (mkdir(path, S_IRWXU)) {
+        DEBUGPRINT(0,"EE:: mkdir() failed: %s\n", strerror(errno));
+        return 1;
+    }
+
+    DEBUGPRINT(2,"II:: created directory %s\n", path);
+    return 0;
+}
+
+
+/**
+ * @brief Create path from directory and filename
+ *
+ * @param dest      Where to store result
+ * @param f         Filename
+ * @param d         Directory path
+ *
+ * @return 0 if okay
+ */
+int constructPath (char **dest, const char *f, const char *d) {
+
+    if (!f || !d) {
+        DEBUGPRINT(0, "EE:: bad path or filename in constructPath\n");
+        return 1;
+    }
+
+    *dest = malloc(strlen(f) + strlen(d) + 2);
+    if (!*dest) {
+        DEBUGPRINT(0, "EE:: malloc failed in constructPath()\n");
+        return 2;
+    }
+
+    sprintf(*dest, "%s/%s", d, f);
     return 0;
 }
 
