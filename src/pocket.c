@@ -32,7 +32,7 @@ int pocket_get_access_token     (const char *token);    // oauth step 3
  *
  * @return 0 if successful
  */
-int pocket_authorize() {
+int pocket_authorize(void) {
 
     DEBUGPRINT(1, "II:: requesting token from pocket...\n");
 

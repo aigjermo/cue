@@ -30,7 +30,7 @@ size_t network_get_response (void *ptr, size_t size, size_t nmemb, void *out);
  *
  * @return 0 if successful
  */
-int network_init() {
+int network_init(void) {
 
     curl_global_init(CURL_GLOBAL_DEFAULT);
 
@@ -47,7 +47,7 @@ int network_init() {
 /**
  * @brief close down curl
  */
-void network_cleanup () {
+void network_cleanup (void) {
 
     curl_easy_cleanup(curl);
     curl_global_cleanup();
