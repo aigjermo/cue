@@ -99,6 +99,12 @@ int storage_store_token (const char *token) {
     return 0;
 }
 
+
+int storage_retr_token (char **dest) {
+
+    return 1;
+}
+
 /**  @} */
 
 /**
