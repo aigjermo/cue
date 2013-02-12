@@ -4,8 +4,8 @@
 #include "defaults.h"
 
 
-int     storage_init ();
-void    storage_cleanup ();
+int     storage_init (void);
+void    storage_cleanup (void);
 int     storage_store_token (const char *token);
 
 #endif

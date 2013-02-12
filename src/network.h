@@ -12,8 +12,8 @@ typedef struct {
 } network_response;
 
 
-int     network_init();                 // init curl
-void    network_cleanup();              // shut down and clean up curl
+int     network_init(void);                 // init curl
+void    network_cleanup(void);              // shut down and clean up curl
 void    network_response_cleanup(
             network_response *res);     // free the response struct;
 

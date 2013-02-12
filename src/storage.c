@@ -18,7 +18,7 @@
 /**
  * @name Internal procedure declarations
  * @{ */
-int setStorageDirs ();
+int setStorageDirs (void);
 
 // utility declarations
 int getDir          (char **dest, const char *v, char *def);
@@ -43,7 +43,7 @@ struct {
  *
  * @return 0 if okay
  */
-int storage_init () {
+int storage_init (void) {
 
     if(setStorageDirs ()) {
         DEBUGPRINT(0, "EE:: failed to decide data/config directories\n");
@@ -60,7 +60,7 @@ int storage_init () {
 /**
  * @brief Free memory from configuration
  */
-void storage_cleanup () {
+void storage_cleanup (void) {
 
     if (storageDirs.conf) free(storageDirs.conf);
     if (storageDirs.data) free(storageDirs.data);
@@ -110,7 +110,7 @@ int storage_store_token (const char *token) {
  *
  * @return 0 if okay
  */
-int setStorageDirs () {
+int setStorageDirs (void) {
 
     if (getDir(&(storageDirs.conf), "XDG_CONFIG_HOME", "/.config"))
         return 1;

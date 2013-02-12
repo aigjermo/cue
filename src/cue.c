@@ -23,7 +23,7 @@ action  parse_args          (int argc, char **argv);
 
 int     cue_authorize       (int argc, char **argv);
 int     cue_add_url         (int argc, char **argv);
-void    cue_print_usage     ();
+void    cue_print_usage     (void);
 
 /**  @} */
 
@@ -65,7 +65,7 @@ int main (int argc, char **argv) {
 /**
  * @brief print usage info
  */
-void cue_print_usage () {
+void cue_print_usage (void) {
 
     printf("Todo: helptext\n");
 }
