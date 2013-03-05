@@ -120,6 +120,42 @@ network_response *network_post(const char *url, const char *data) {
     return response;
 }
 
+
+/**
+ * @brief URLencode a string
+ *
+ * @param dest      pointer to a string where the result will be stored
+ * @param source    string to encode
+ *
+ * @return          pointer to the encoded string
+ */
+char *network_escape(const char *source) {
+
+    if (!curl) {
+        DEBUGPRINT(0, "EE:: curl has not been initialized\n");
+        return NULL;
+    }
+
+    char *buf = curl_easy_escape(curl, source, 0);
+    if (!buf) {
+        DEBUGPRINT(0, "EE:: curl could not escape string\n");
+        return NULL;
+    }
+
+    int len = strlen(buf);
+    char *dest = malloc(len+1);
+    if (!dest) {
+        DEBUGPRINT(0, "EE:: network_escape(): Could not malloc\n");
+        return NULL;
+    }
+
+    strncpy(dest, buf, len+1);
+    curl_free(buf);
+
+    return dest;
+}
+    
+
 /**  @} */
 
 /**

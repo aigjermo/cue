@@ -57,6 +57,57 @@ int pocket_authorize(void) {
     return 0;
 }
 
+
+/**
+ * @brief add a url to pocket for reading later
+ *
+ * @param url       url to add
+ * @param title     optional title of the page
+ *
+ * @return 0 if successful
+ */
+int pocket_add_url(char *url, char *title) {
+
+    DEBUGPRINT(1, "II:: Adding url to pocket...\n");
+
+    char *token = NULL;
+
+    if (storage_retr_token(&token)) {
+        DEBUGPRINT(0,"II:: No stored token, "
+                "please authorize against pocket first\n");
+        return 1;
+    }
+
+    char *u = network_escape(url);
+    char *t = network_escape(title);
+    if (!u || !t) {
+        DEBUGPRINT(0,"EE:: pocket_add_url(): could not encode strings\n");
+        return 2;
+    }
+
+    // length of the request string (including null byte)
+    int len = strlen(POCKET_KEY) + strlen(token) + strlen(u) + strlen(t) + 40;
+    char *data = malloc(len);
+
+    sprintf(data, "url=%s&title=%s&consumer_key=%s&access_token=%s",
+            u, t, POCKET_KEY, token);
+
+    network_response *res = network_post(POCKET_URL "v3/add", data);
+    if (!res) {
+        return 3;
+    }
+
+    printf("%s\n", res->string);
+    
+    //free stuff
+    network_response_cleanup(res);
+    free (data);
+    free (token);
+    free (u);
+    free (t);
+    return 0;
+}
+
 /**  @} */
 
 /**
@@ -83,7 +134,6 @@ int pocket_get_request_token(char **token) {
     if (!ptr) {
         DEBUGPRINT(0, "EE:: got malformed response from pocket:\nEE:: -> %s\n", 
                 res->string);
-        free(res);
         network_response_cleanup(res);
         return 2;
     }

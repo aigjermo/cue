@@ -87,6 +87,7 @@ int storage_store_token (const char *token) {
     }
 
     FILE *f = fopen(filename, "w");
+    free(filename);
     if (!f) {
         DEBUGPRINT(0,"EE:: storage_store_token() "
                 "could not open file for writing: %s\n", strerror(errno));
@@ -102,7 +103,58 @@ int storage_store_token (const char *token) {
 
 int storage_retr_token (char **dest) {
 
-    return 1;
+    if (!storageDirs.conf) {
+        DEBUGPRINT(0,"EE:: storage_retr_token() before storage_init()\n");
+        return 1;
+    }
+
+    char *filename = NULL;
+    if (constructPath(&filename, "token", storageDirs.conf)) {
+        return 2;
+    }
+
+    FILE *f = fopen(filename, "r");
+    free(filename);
+    if (!f) {
+        DEBUGPRINT(1,"EE:: storage_retr_token() "
+                "could not open file for reading: %s\n", strerror(errno));
+        return 3;
+    }
+
+    if (fseek(f, 0L, SEEK_END)) {
+        DEBUGPRINT(0,"EE:: storage_retr_token() "
+                "could not seek to end of file: %s\n", strerror(errno));
+        fclose(f);
+        return 4;
+    }
+
+    size_t size = ftell(f);
+    fseek(f, 0L, SEEK_SET);
+    if (size == 0) {
+        DEBUGPRINT(1,"EE:: storage_retr_token() file is empty\n");
+        fclose(f);
+        return 5;
+    }
+    
+    *dest = malloc(size + 1);
+    if (!*dest) {
+        DEBUGPRINT(0,"EE: storage_retr_token() malloc failed\n");
+        fclose(f);
+        return 6;
+    }
+
+    size_t cnt;
+    if ((cnt = fread(*dest, 1, size, f)) < size) {
+        DEBUGPRINT(0,"EE: storage_retr_token() "
+                "got too few bytes from fread: %zu\n", cnt);
+        fclose(f);
+        free(*dest);
+        return 7;
+    }
+
+    *((*dest)+size) = '\0';
+    fclose(f);
+    return 0;
 }
 
 /**  @} */

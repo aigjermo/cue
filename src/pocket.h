@@ -9,7 +9,8 @@
 #define POCKET_KEY      "11706-e0ddf4a044fc1629613f1abc"
 
 
-int     pocket_authorize(void);           // authorize application with pocket
-void    pocket_cleanup(void);
+int     pocket_authorize (void);                    // authorize with pocket
+int     pocket_add_url   (char *url, char *title);  // add page to pocket
+void    pocket_cleanup   (void);
 
 #endif
