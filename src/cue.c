@@ -89,7 +89,12 @@ int cue_authorize (int argc, char **argv) {
  */
 int cue_add_url (int argc, char **argv) {
 
-    return 0;
+    if (argc < 3) {
+        cue_print_usage();
+        return -1;
+    }
+
+    return pocket_add_url(argv[2], (argc<4) ? "" : argv[3]);
 }
 
 /**  @} */
