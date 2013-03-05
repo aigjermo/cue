@@ -97,7 +97,7 @@ int pocket_add_url(char *url, char *title) {
         return 3;
     }
 
-    printf("%s\n", res->string);
+    printf("Added %s to pocket\n", url);
     
     //free stuff
     network_response_cleanup(res);
