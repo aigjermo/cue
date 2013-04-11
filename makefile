@@ -1,12 +1,12 @@
 ################################################################################
 #                           Makefile for cue                                   #
 #                                                                              #
-#	Targets:                                                                   #
+#   Targets:                                                                   #
 #       all                - compile everything                                #
-#		cue                - compile cue                                       #
+#       cue                - compile cue                                       #
 #       debug              - compile everything with debug printing            #
 #       fulldebug          - compile everything with more debug printing       #
-#		clean              - remove object files                               #
+#       clean              - remove object files                               #
 #                                                                              #
 ################################################################################
 
